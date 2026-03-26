@@ -16,7 +16,11 @@ sequelize.sync({ alter: true }).then(() => console.log('✅ Models synced'));
 // Middleware
 app.use(cors({
   origin: function (origin, callback) {
-    const allowedOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  process.env.CLIENT_URL
+  ];
     if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.CLIENT_URL === origin) {
       callback(null, true);
     } else {
