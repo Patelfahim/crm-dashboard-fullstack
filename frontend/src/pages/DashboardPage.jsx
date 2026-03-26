@@ -1,0 +1,415 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { dashboardAPI } from '../services/api';
+import './DashboardPage.css';
+
+const MOCK_STATS = {
+  revenue: { value: '₹2.4Cr', change: '+18%', up: true, label: 'Revenue this month' },
+  leads: { value: '342', change: '+24', up: true, label: 'Active leads' },
+  deals: { value: '28', change: '-3', up: false, label: 'Deals closing soon' },
+  winRate: { value: '64%', change: '+6%', up: true, label: 'Win rate' },
+};
+
+const MOCK_LEADS = [
+  { id: 1, name: 'Priya Sharma', company: 'Infosys Ltd', value: '₹12L', stage: 'Proposal', avatar: 'PS', color: '#c9a84c' },
+  { id: 2, name: 'Rohan Mehta', company: 'TCS Global', value: '₹8.5L', stage: 'Negotiation', avatar: 'RM', color: '#2d7a5e' },
+  { id: 3, name: 'Ananya Iyer', company: 'Wipro Tech', value: '₹21L', stage: 'Qualified', avatar: 'AI', color: '#7c6ba8' },
+  { id: 4, name: 'Karan Bose', company: 'HCL Systems', value: '₹4.2L', stage: 'Discovery', avatar: 'KB', color: '#c45c5c' },
+  { id: 5, name: 'Divya Nair', company: 'Cognizant', value: '₹16L', stage: 'Proposal', avatar: 'DN', color: '#d4822a' },
+  { id: 6, name: 'Arjun Patel', company: 'Tech Mahindra', value: '₹9L', stage: 'Won', avatar: 'AP', color: '#2d7a5e' },
+];
+
+const MOCK_TASKS = [
+  { id: 1, title: 'Follow up with Priya on Q2 proposal', due: 'Today, 3:00 PM', priority: 'high', done: false },
+  { id: 2, title: 'Send contract draft to TCS team', due: 'Today, 5:30 PM', priority: 'high', done: false },
+  { id: 3, title: 'Prepare demo for Wipro pitch', due: 'Tomorrow', priority: 'medium', done: false },
+  { id: 4, title: 'Update CRM records for Q1 deals', due: 'Mar 28', priority: 'low', done: true },
+  { id: 5, title: 'Review HCL discovery call notes', due: 'Mar 27', priority: 'medium', done: false },
+  { id: 6, title: 'Schedule onboarding for Arjun', due: 'Mar 29', priority: 'low', done: true },
+];
+
+const MOCK_PIPELINE = [
+  { stage: 'Discovery', count: 8, value: '₹34L', color: '#7c6ba8', pct: 25 },
+  { stage: 'Qualified', count: 12, value: '₹68L', color: '#c9a84c', pct: 42 },
+  { stage: 'Proposal', count: 7, value: '₹91L', color: '#d4822a', pct: 30 },
+  { stage: 'Negotiation', count: 5, value: '₹54L', color: '#2d7a5e', pct: 20 },
+  { stage: 'Won', count: 3, value: '₹29L', color: '#3da37d', pct: 12 },
+];
+
+const STAGE_COLORS = {
+  Discovery: '#7c6ba8', Qualified: '#c9a84c', Proposal: '#d4822a',
+  Negotiation: '#2d7a5e', Won: '#3da37d', Lost: '#c45c5c',
+};
+
+const PRIORITY_LABEL = { high: 'High', medium: 'Medium', low: 'Low' };
+
+export default function DashboardPage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [tasks, setTasks] = useState(MOCK_TASKS);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [stats] = useState(MOCK_STATS);
+  const [leads] = useState(MOCK_LEADS);
+  const [pipeline] = useState(MOCK_PIPELINE);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const toggleTask = (id) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  };
+
+  const filteredLeads = leads.filter(l =>
+    l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    l.company.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const pendingTasks = tasks.filter(t => !t.done).length;
+
+  const navItems = [
+    { key: 'overview', icon: '⬡', label: 'Overview' },
+    { key: 'leads', icon: '◈', label: 'Leads' },
+    { key: 'pipeline', icon: '◫', label: 'Pipeline' },
+    { key: 'tasks', icon: '◻', label: 'Tasks', badge: pendingTasks },
+  ];
+
+  return (
+    <div className="dash-root">
+      {/* Sidebar */}
+      <aside className={`dash-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-logo">
+          <span className="brand-icon-sm">◆</span>
+          <span className="brand-name-sm">DASH</span>
+        </div>
+
+        <nav className="sidebar-nav">
+          {navItems.map(item => (
+            <button
+              key={item.key}
+              className={`nav-item ${activeTab === item.key ? 'active' : ''}`}
+              onClick={() => { setActiveTab(item.key); setSidebarOpen(false); }}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+              {item.badge > 0 && <span className="nav-badge">{item.badge}</span>}
+            </button>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <div className="user-avatar-sm">
+              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
+            <div className="user-info-sm">
+              <span className="user-name-sm">{user?.name || 'Demo User'}</span>
+              <span className="user-role-sm">{user?.role || 'Sales Manager'}</span>
+            </div>
+          </div>
+          <button className="sidebar-logout" onClick={handleLogout} title="Sign out">⏻</button>
+        </div>
+      </aside>
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+
+      {/* Main content */}
+      <main className="dash-main">
+        {/* Top bar */}
+        <header className="dash-header">
+          <div className="header-left">
+            <button className="menu-btn" onClick={() => setSidebarOpen(s => !s)}>☰</button>
+            <div className="header-title-group">
+              <h1 className="header-title">
+                {activeTab === 'overview' && 'Dashboard'}
+                {activeTab === 'leads' && 'Leads'}
+                {activeTab === 'pipeline' && 'Pipeline'}
+                {activeTab === 'tasks' && 'Tasks'}
+              </h1>
+              <span className="header-date">
+                {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </span>
+            </div>
+          </div>
+          <div className="header-right">
+            {(activeTab === 'leads') && (
+              <div className="search-wrap">
+                <span className="search-icon">⌕</span>
+                <input
+                  className="search-input"
+                  placeholder="Search leads..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+            )}
+            <div className="profile-wrap" ref={profileRef}>
+              <button className="profile-btn" onClick={() => setProfileOpen(o => !o)}>
+                <div className="profile-avatar">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+              </button>
+              {profileOpen && (
+                <div className="profile-dropdown fade-in">
+                  <div className="profile-dd-header">
+                    <div className="profile-dd-avatar">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
+                    <div>
+                      <div className="profile-dd-name">{user?.name || 'Demo User'}</div>
+                      <div className="profile-dd-email">{user?.email || 'demo@crm.com'}</div>
+                    </div>
+                  </div>
+                  <div className="profile-dd-divider" />
+                  <button className="profile-dd-item" onClick={handleLogout}>
+                    <span>⏻</span> Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Content area */}
+        <div className="dash-content">
+          {activeTab === 'overview' && (
+            <OverviewTab stats={stats} leads={leads} tasks={tasks} toggleTask={toggleTask} pipeline={pipeline} />
+          )}
+          {activeTab === 'leads' && <LeadsTab leads={filteredLeads} />}
+          {activeTab === 'pipeline' && <PipelineTab pipeline={pipeline} />}
+          {activeTab === 'tasks' && <TasksTab tasks={tasks} toggleTask={toggleTask} />}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/* ── Overview Tab ── */
+function OverviewTab({ stats, leads, tasks, toggleTask, pipeline }) {
+  const pendingTasks = tasks.filter(t => !t.done).slice(0, 4);
+  const recentLeads = leads.slice(0, 4);
+
+  return (
+    <div className="overview-grid fade-up">
+      {/* Stat cards */}
+      <div className="stats-row">
+        {Object.entries(stats).map(([key, s]) => (
+          <div className="stat-card" key={key}>
+            <span className="stat-card-label">{s.label}</span>
+            <div className="stat-card-value">{s.value}</div>
+            <span className={`stat-card-change ${s.up ? 'up' : 'down'}`}>
+              {s.up ? '↑' : '↓'} {s.change} vs last month
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Pipeline mini */}
+      <div className="overview-card pipeline-mini">
+        <div className="card-header">
+          <h3 className="card-title">Pipeline Overview</h3>
+          <span className="card-total">Total: ₹2.76Cr</span>
+        </div>
+        <div className="pipeline-bars">
+          {pipeline.map(p => (
+            <div className="pipeline-bar-row" key={p.stage}>
+              <div className="pb-meta">
+                <span className="pb-stage">{p.stage}</span>
+                <span className="pb-value">{p.value}</span>
+              </div>
+              <div className="pb-track">
+                <div className="pb-fill" style={{ width: `${p.pct}%`, background: p.color }} />
+              </div>
+              <span className="pb-count">{p.count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Leads */}
+      <div className="overview-card">
+        <div className="card-header">
+          <h3 className="card-title">Recent Leads</h3>
+          <span className="card-link">View all →</span>
+        </div>
+        <div className="leads-list">
+          {recentLeads.map(l => (
+            <div className="lead-row" key={l.id}>
+              <div className="lead-avatar" style={{ background: l.color + '22', color: l.color }}>{l.avatar}</div>
+              <div className="lead-info">
+                <span className="lead-name">{l.name}</span>
+                <span className="lead-company">{l.company}</span>
+              </div>
+              <div className="lead-right">
+                <span className="lead-value">{l.value}</span>
+                <span className="lead-stage-badge" style={{ background: STAGE_COLORS[l.stage] + '18', color: STAGE_COLORS[l.stage] }}>
+                  {l.stage}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tasks */}
+      <div className="overview-card">
+        <div className="card-header">
+          <h3 className="card-title">Upcoming Tasks</h3>
+          <span className="card-link">View all →</span>
+        </div>
+        <div className="tasks-list">
+          {pendingTasks.map(t => (
+            <TaskItem key={t.id} task={t} onToggle={toggleTask} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Leads Tab ── */
+function LeadsTab({ leads }) {
+  return (
+    <div className="fade-up">
+      <div className="leads-table-wrap">
+        <table className="leads-table">
+          <thead>
+            <tr>
+              <th>Contact</th>
+              <th>Company</th>
+              <th>Deal Value</th>
+              <th>Stage</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leads.map(l => (
+              <tr key={l.id} className="lead-table-row">
+                <td>
+                  <div className="lead-cell">
+                    <div className="lead-avatar" style={{ background: l.color + '22', color: l.color }}>{l.avatar}</div>
+                    <span className="lead-name">{l.name}</span>
+                  </div>
+                </td>
+                <td><span className="table-company">{l.company}</span></td>
+                <td><span className="table-value">{l.value}</span></td>
+                <td>
+                  <span className="lead-stage-badge" style={{ background: STAGE_COLORS[l.stage] + '18', color: STAGE_COLORS[l.stage] }}>
+                    {l.stage}
+                  </span>
+                </td>
+                <td>
+                  <div className="table-actions">
+                    <button className="action-btn" title="Edit">✎</button>
+                    <button className="action-btn" title="View">◈</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ── Pipeline Tab ── */
+function PipelineTab({ pipeline }) {
+  const total = pipeline.reduce((s, p) => s + p.count, 0);
+
+  return (
+    <div className="fade-up pipeline-page">
+      <div className="pipeline-summary">
+        {pipeline.map(p => (
+          <div className="pipeline-summary-card" key={p.stage} style={{ borderTopColor: p.color }}>
+            <div className="ps-stage" style={{ color: p.color }}>{p.stage}</div>
+            <div className="ps-count">{p.count}</div>
+            <div className="ps-value">{p.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="pipeline-detail-card">
+        <h3 className="card-title" style={{ marginBottom: 24 }}>Stage Breakdown</h3>
+        {pipeline.map(p => {
+          const pct = Math.round((p.count / total) * 100);
+          return (
+            <div className="pipeline-detail-row" key={p.stage}>
+              <div className="pdr-left">
+                <div className="pdr-dot" style={{ background: p.color }} />
+                <div>
+                  <div className="pdr-stage">{p.stage}</div>
+                  <div className="pdr-meta">{p.count} leads · {p.value}</div>
+                </div>
+              </div>
+              <div className="pdr-bar-wrap">
+                <div className="pdr-bar-track">
+                  <div className="pdr-bar-fill" style={{ width: `${pct}%`, background: p.color }} />
+                </div>
+                <span className="pdr-pct">{pct}%</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── Tasks Tab ── */
+function TasksTab({ tasks, toggleTask }) {
+  const pending = tasks.filter(t => !t.done);
+  const done = tasks.filter(t => t.done);
+
+  return (
+    <div className="fade-up tasks-page">
+      <div className="tasks-section">
+        <h3 className="tasks-section-title">Pending <span className="tasks-count">{pending.length}</span></h3>
+        <div className="tasks-list-full">
+          {pending.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} full />)}
+        </div>
+      </div>
+      {done.length > 0 && (
+        <div className="tasks-section">
+          <h3 className="tasks-section-title">Completed <span className="tasks-count done">{done.length}</span></h3>
+          <div className="tasks-list-full">
+            {done.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} full />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Reusable TaskItem ── */
+function TaskItem({ task, onToggle, full }) {
+  return (
+    <div className={`task-item ${task.done ? 'task-done' : ''}`}>
+      <button className={`task-check ${task.done ? 'checked' : ''}`} onClick={() => onToggle(task.id)}>
+        {task.done && '✓'}
+      </button>
+      <div className="task-body">
+        <span className="task-title">{task.title}</span>
+        {full && (
+          <span className={`task-priority prio-${task.priority}`}>{PRIORITY_LABEL[task.priority]}</span>
+        )}
+      </div>
+      <span className="task-due">{task.due}</span>
+    </div>
+  );
+}
