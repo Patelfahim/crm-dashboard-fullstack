@@ -131,7 +131,7 @@ export default function LoginPage() {
 
           <div className="login-demo-hint">
             <span>Demo credentials:</span>
-            <code>admin@crm.com</code> / <code>Admin@123</code>
+            <code>admin@crm.com</code> / <code>Admin@1234</code>
             <span className="hint-note">(run /api/auth/seed first)</span>
           </div>
         </div>

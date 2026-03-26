@@ -25,6 +25,7 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     console.log("📥 Login attempt:", email);
+    console.log("🔑 Password provided:", password); // temporary for debugging
 
     // validation
     if (!email || !password) {
@@ -96,11 +97,11 @@ router.get('/seed', async (req, res) => {
 
     await User.destroy({ where: {} });
 
-    const hashedPassword = await bcrypt.hash('Demo@1234', 10);
+    const hashedPassword = await bcrypt.hash('Admin@1234', 10);
 
     const user = await User.create({
       name: 'Admin User',
-      email: 'demo@crm.com',
+      email: 'admin@crm.com',
       password: hashedPassword,
       role: 'admin'
     });
@@ -110,8 +111,8 @@ router.get('/seed', async (req, res) => {
     res.json({
       message: 'User created successfully',
       credentials: {
-        email: 'demo@crm.com',
-        password: 'Demo@1234'
+        email: 'admin@crm.com',
+        password: 'Admin@1234'
       }
     });
 

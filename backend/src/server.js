@@ -66,15 +66,15 @@ const seedUser = async () => {
     console.log("🌱 Checking admin user...");
 
     const existing = await User.findOne({
-      where: { email: 'demo@crm.com' }
+      where: { email: 'admin@crm.com' }
     });
 
     if (!existing) {
-      const hashedPassword = await bcrypt.hash('Demo@1234', 10);
+      const hashedPassword = await bcrypt.hash('Admin@1234', 10);
 
       await User.create({
         name: 'Admin',
-        email: 'demo@crm.com',
+        email: 'admin@crm.com',
         password: hashedPassword,
         role: 'admin'
       });
