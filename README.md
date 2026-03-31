@@ -1,5 +1,5 @@
 ## 🌐 Live Demo
-🔗 https://dashboard-ptl.netlify.app/login
+🔗 https://dashboard-ptl.netlify.app
 
 
 
