@@ -136,8 +136,21 @@ export default function LoginPage() {
           </form>
 
           <div className="login-demo-hint">
-            <span>Demo credentials:</span>
-            <code>admin@crm.com</code> / <code>Admin@1234</code>
+            <span className="hint-title">Quick login:</span>
+            <div className="demo-accounts">
+              <button type="button" className="demo-account-btn" onClick={() => { setForm({ email: 'admin@crm.com', password: 'Admin@1234' }); setErrors({}); setApiError(''); }}>
+                <span className="demo-role" style={{ background: '#c9a84c22', color: '#c9a84c' }}>Admin</span>
+                <span className="demo-email">admin@crm.com</span>
+              </button>
+              <button type="button" className="demo-account-btn" onClick={() => { setForm({ email: 'sales@crm.com', password: 'Sales@1234' }); setErrors({}); setApiError(''); }}>
+                <span className="demo-role" style={{ background: '#2d7a5e22', color: '#2d7a5e' }}>Sales</span>
+                <span className="demo-email">sales@crm.com</span>
+              </button>
+              <button type="button" className="demo-account-btn" onClick={() => { setForm({ email: 'user@crm.com', password: 'User@1234' }); setErrors({}); setApiError(''); }}>
+                <span className="demo-role" style={{ background: '#7c6ba822', color: '#7c6ba8' }}>Viewer</span>
+                <span className="demo-email">user@crm.com</span>
+              </button>
+            </div>
             <span className="hint-note">(run /api/auth/seed first)</span>
           </div>
         </div>

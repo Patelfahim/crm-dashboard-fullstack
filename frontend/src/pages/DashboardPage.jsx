@@ -44,9 +44,22 @@ const STAGE_COLORS = {
 
 const PRIORITY_LABEL = { high: 'High', medium: 'Medium', low: 'Low' };
 
+// Role permission helpers
+const ROLE_PERMISSIONS = {
+  admin: { tabs: ['overview', 'leads', 'pipeline', 'tasks'], canCreateLead: true, canEditLead: true, canDeleteLead: true, canCreateTask: true, canEditTask: true, canDeleteTask: true },
+  sales: { tabs: ['overview', 'leads', 'pipeline', 'tasks'], canCreateLead: true, canEditLead: true, canDeleteLead: false, canCreateTask: true, canEditTask: true, canDeleteTask: false },
+  user:  { tabs: ['overview', 'tasks'], canCreateLead: false, canEditLead: false, canDeleteLead: false, canCreateTask: false, canEditTask: false, canDeleteTask: false },
+};
+
+const getPermissions = (role) => ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.user;
+
+const ROLE_LABELS = { admin: 'Administrator', sales: 'Sales Rep', user: 'Viewer' };
+const ROLE_COLORS = { admin: '#c9a84c', sales: '#2d7a5e', user: '#7c6ba8' };
+
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const perms = getPermissions(user?.role);
   const [activeTab, setActiveTab] = useState('overview');
   
   // Data State
@@ -195,12 +208,13 @@ export default function DashboardPage() {
 
   const pendingTasks = tasks.filter(t => !t.done).length;
 
-  const navItems = [
+  const allNavItems = [
     { key: 'overview', icon: '⬡', label: 'Overview' },
     { key: 'leads', icon: '◈', label: 'Leads' },
     { key: 'pipeline', icon: '◫', label: 'Pipeline' },
     { key: 'tasks', icon: '◻', label: 'Tasks', badge: pendingTasks },
   ];
+  const navItems = allNavItems.filter(item => perms.tabs.includes(item.key));
 
   return (
     <div className="dash-root">
@@ -232,7 +246,9 @@ export default function DashboardPage() {
             </div>
             <div className="user-info-sm">
               <span className="user-name-sm">{user?.name || 'Demo User'}</span>
-              <span className="user-role-sm">{user?.role || 'Sales Manager'}</span>
+              <span className="user-role-sm" style={{ color: ROLE_COLORS[user?.role] || '#aaa' }}>
+                {ROLE_LABELS[user?.role] || user?.role || 'User'}
+              </span>
             </div>
           </div>
           <button className="sidebar-logout" onClick={handleLogout} title="Sign out">⏻</button>
@@ -261,12 +277,12 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="header-right">
-            {activeTab === 'leads' && (
+            {activeTab === 'leads' && perms.canCreateLead && (
               <button className="add-btn-primary" onClick={() => { setEditingItem(null); setShowLeadModal(true); }}>
                 + Add Lead
               </button>
             )}
-            {activeTab === 'tasks' && (
+            {activeTab === 'tasks' && perms.canCreateTask && (
               <button className="add-btn-primary" onClick={() => { setEditingItem(null); setShowTaskModal(true); }}>
                 + Add Task
               </button>
@@ -328,17 +344,17 @@ export default function DashboardPage() {
               {activeTab === 'leads' && (
                 <LeadsTab 
                   leads={filteredLeads} 
-                  onEdit={(l) => { setEditingItem(l); setShowLeadModal(true); }}
-                  onDelete={handleDeleteLead}
+                  onEdit={perms.canEditLead ? (l) => { setEditingItem(l); setShowLeadModal(true); } : null}
+                  onDelete={perms.canDeleteLead ? handleDeleteLead : null}
                 />
               )}
               {activeTab === 'pipeline' && <PipelineTab pipeline={pipeline} />}
               {activeTab === 'tasks' && (
                 <TasksTab 
                   tasks={tasks} 
-                  toggleTask={toggleTask}
-                  onEdit={(t) => { setEditingItem(t); setShowTaskModal(true); }}
-                  onDelete={handleDeleteTask}
+                  toggleTask={perms.canEditTask ? toggleTask : null}
+                  onEdit={perms.canEditTask ? (t) => { setEditingItem(t); setShowTaskModal(true); } : null}
+                  onDelete={perms.canDeleteTask ? handleDeleteTask : null}
                 />
               )}
             </>
@@ -471,7 +487,7 @@ function LeadsTab({ leads, onEdit, onDelete }) {
               <th>Company</th>
               <th>Deal Value</th>
               <th>Stage</th>
-              <th>Actions</th>
+              {(onEdit || onDelete) && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -492,12 +508,14 @@ function LeadsTab({ leads, onEdit, onDelete }) {
                     {l.status}
                   </span>
                 </td>
+                {(onEdit || onDelete) && (
                 <td>
                   <div className="table-actions">
-                    <button className="action-btn" onClick={() => onEdit(l)} title="Edit">✎</button>
-                    <button className="action-btn delete" onClick={() => onDelete(l.id)} title="Delete">✕</button>
+                    {onEdit && <button className="action-btn" onClick={() => onEdit(l)} title="Edit">✎</button>}
+                    {onDelete && <button className="action-btn delete" onClick={() => onDelete(l.id)} title="Delete">✕</button>}
                   </div>
                 </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -598,7 +616,7 @@ function TaskItem({ task, onToggle, full, onEdit, onDelete }) {
   const isDone = task.status === 'Completed';
   return (
     <div className={`task-item ${isDone ? 'task-done' : ''}`}>
-      <button className={`task-check ${isDone ? 'checked' : ''}`} onClick={() => onToggle(task.id)}>
+      <button className={`task-check ${isDone ? 'checked' : ''}`} onClick={() => onToggle && onToggle(task.id)} style={!onToggle ? { cursor: 'default', opacity: 0.6 } : {}}>
         {isDone && '✓'}
       </button>
       <div className="task-body">
@@ -608,10 +626,10 @@ function TaskItem({ task, onToggle, full, onEdit, onDelete }) {
         )}
       </div>
       <span className="task-due">{task.due}</span>
-      {full && (
+      {full && (onEdit || onDelete) && (
         <div className="task-actions">
-          <button className="action-btn-sm" onClick={onEdit}>✎</button>
-          <button className="action-btn-sm delete" onClick={onDelete}>✕</button>
+          {onEdit && <button className="action-btn-sm" onClick={onEdit}>✎</button>}
+          {onDelete && <button className="action-btn-sm delete" onClick={onDelete}>✕</button>}
         </div>
       )}
     </div>
