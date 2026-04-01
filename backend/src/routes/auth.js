@@ -90,48 +90,33 @@ router.get('/me', protect, (req, res) => {
 });
 
 
-// 🌱 SEED USER (CHANGED TO GET FOR BROWSER ACCESS)
+// 🌱 SEED USERS (CHANGED TO GET FOR BROWSER ACCESS)
 router.get('/seed', async (req, res) => {
   try {
-    console.log("🌱 Seeding user...");
+    console.log("🌱 Seeding users...");
 
     await User.destroy({ where: {} });
 
-    const hashedPassword = await bcrypt.hash('Admin@1234', 10);
+    const usersToSeed = [
+      { name: 'Admin User', email: 'admin@crm.com', password: 'Admin@1234', role: 'admin' },
+      { name: 'Regular User', email: 'user@crm.com', password: 'User@1234', role: 'user' },
+      { name: 'Sales Rep', email: 'sales@crm.com', password: 'Sales@1234', role: 'sales' },
+    ];
 
-    const user = await User.create({
-      name: 'Admin User',
-      email: 'admin@crm.com',
-      password: hashedPassword,
-      role: 'admin'
-    });
-
-    const hashedPassword2 = await bcrypt.hash('User@1234', 10);
-
-    const user2 = await User.create({
-      name: 'User',
-      email: 'user@crm.com',
-      password: hashedPassword2,
-      role: 'user'
-    });
-
-    console.log("✅ User created:", user.email);
-    console.log("✅ User created:", user2.email);
+    for (const u of usersToSeed) {
+      const hashedPassword = await bcrypt.hash(u.password, 10);
+      await User.create({
+        name: u.name,
+        email: u.email,
+        password: hashedPassword,
+        role: u.role,
+      });
+      console.log(`✅ ${u.role} user created: ${u.email}`);
+    }
 
     res.json({
-      message: 'User created successfully',
-      credentials: {
-        email: 'admin@crm.com',
-        password: 'Admin@1234'
-      }
-    });
-
-    res.json({
-      message: 'User created successfully',
-      credentials: {
-        email: 'user@crm.com',
-        password: 'User@1234'
-      }
+      message: 'All users seeded successfully',
+      users: usersToSeed.map(u => ({ email: u.email, password: u.password, role: u.role }))
     });
 
   } catch (error) {

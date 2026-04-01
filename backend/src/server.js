@@ -112,8 +112,8 @@ const startServer = async () => {
     console.log("👉 Syncing database...");
     await sequelize.sync();
 
-    console.log("👉 Seeding user...");
-    await seedUser();
+    console.log("👉 Seeding users...");
+    await seedUsers();
 
     console.log("✅ Server ready");
 

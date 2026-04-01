@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 const Lead = require('../models/Lead');
 const Task = require('../models/Task');
 const User = require('../models/User');
 
 // @route   GET /api/dashboard/stats
+// All authenticated users can view stats
 router.get('/stats', protect, async (req, res) => {
   try {
     const totalLeads = await Lead.count();
@@ -27,7 +28,7 @@ router.get('/stats', protect, async (req, res) => {
         tasksToday,
         revenue: `₹${totalRevenue.toLocaleString('en-IN')}`,
         conversionRate: totalLeads > 0 ? `${Math.round((hotLeads/totalLeads)*100)}%` : '0%',
-        activePipeline: `₹${(totalRevenue * 0.4).toLocaleString('en-IN')}` // Dummy calculation for pipeline
+        activePipeline: `₹${(totalRevenue * 0.4).toLocaleString('en-IN')}`
       }
     });
   } catch (error) {
@@ -37,6 +38,7 @@ router.get('/stats', protect, async (req, res) => {
 
 // --- LEADS CRUD ---
 
+// All authenticated users can VIEW leads
 router.get('/leads', protect, async (req, res) => {
   try {
     const leads = await Lead.findAll({ order: [['createdAt', 'DESC']] });
@@ -46,7 +48,8 @@ router.get('/leads', protect, async (req, res) => {
   }
 });
 
-router.post('/leads', protect, async (req, res) => {
+// Only admin & sales can CREATE leads
+router.post('/leads', protect, authorize('admin', 'sales'), async (req, res) => {
   try {
     const lead = await Lead.create(req.body);
     res.status(201).json({ success: true, data: lead });
@@ -55,7 +58,8 @@ router.post('/leads', protect, async (req, res) => {
   }
 });
 
-router.put('/leads/:id', protect, async (req, res) => {
+// Only admin & sales can UPDATE leads
+router.put('/leads/:id', protect, authorize('admin', 'sales'), async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
@@ -66,7 +70,8 @@ router.put('/leads/:id', protect, async (req, res) => {
   }
 });
 
-router.delete('/leads/:id', protect, async (req, res) => {
+// Only admin can DELETE leads
+router.delete('/leads/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
@@ -79,6 +84,7 @@ router.delete('/leads/:id', protect, async (req, res) => {
 
 // --- TASKS CRUD ---
 
+// All authenticated users can VIEW tasks
 router.get('/tasks', protect, async (req, res) => {
   try {
     const tasks = await Task.findAll({ order: [['createdAt', 'DESC']] });
@@ -88,7 +94,8 @@ router.get('/tasks', protect, async (req, res) => {
   }
 });
 
-router.post('/tasks', protect, async (req, res) => {
+// Admin & sales can CREATE tasks
+router.post('/tasks', protect, authorize('admin', 'sales'), async (req, res) => {
   try {
     const task = await Task.create(req.body);
     res.status(201).json({ success: true, data: task });
@@ -97,7 +104,8 @@ router.post('/tasks', protect, async (req, res) => {
   }
 });
 
-router.put('/tasks/:id', protect, async (req, res) => {
+// Admin & sales can UPDATE tasks
+router.put('/tasks/:id', protect, authorize('admin', 'sales'), async (req, res) => {
   try {
     const task = await Task.findByPk(req.params.id);
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
@@ -108,7 +116,8 @@ router.put('/tasks/:id', protect, async (req, res) => {
   }
 });
 
-router.delete('/tasks/:id', protect, async (req, res) => {
+// Only admin can DELETE tasks
+router.delete('/tasks/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const task = await Task.findByPk(req.params.id);
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
@@ -119,8 +128,8 @@ router.delete('/tasks/:id', protect, async (req, res) => {
   }
 });
 
-// --- USERS (Read Only for now) ---
-router.get('/users', protect, async (req, res) => {
+// --- USERS (Admin only) ---
+router.get('/users', protect, authorize('admin'), async (req, res) => {
   try {
     const users = await User.findAll({ attributes: { exclude: ['password'] } });
     res.json({ success: true, data: users, total: users.length });

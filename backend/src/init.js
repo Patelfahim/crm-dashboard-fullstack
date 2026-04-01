@@ -24,40 +24,22 @@ const setupDB = async () => {
     await sequelize.sync({ alter: true });
     console.log('✅ Models synced.');
 
-    // Seed admin user
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@crm.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@1234';
+    // Seed users
+    const usersToSeed = [
+      { name: 'Admin User', email: 'admin@crm.com', password: 'Admin@1234', role: 'admin' },
+      { name: 'Regular User', email: 'user@crm.com', password: 'User@1234', role: 'user' },
+      { name: 'Sales Rep', email: 'sales@crm.com', password: 'Sales@1234', role: 'sales' },
+    ];
 
-    const userEmail = process.env.ADMIN_EMAIL || 'user@crm.com';
-    const userPassword = process.env.ADMIN_PASSWORD || 'User@1234';
-
-
-    const existingAdmin = await User.findOne({ where: { email: adminEmail } });
-    if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash(adminPassword, 10);
-      await User.create({
-        name: 'Super Admin',
-        email: adminEmail,
-        password: hashedPassword,
-        role: 'admin'
-      });
-      console.log(`✅ Admin user created: ${adminEmail}`);
-    } else {
-        console.log(`ℹ️ Admin user already exists: ${adminEmail}`);
-    }
-
-    const existingUser = await User.findOne({ where: { email: userEmail } });
-    if (!existingUser) {
-      const hashedPassword2 = await bcrypt.hash(userPassword, 10);
-      await User.create({
-        name: 'Super Admin',
-        email: userEmail,
-        password: hashedPassword2,
-        role: 'admin'
-      });
-      console.log(`✅ Admin user created: ${userEmail}`);
-    } else {
-        console.log(`ℹ️ Admin user already exists: ${userEmail}`);
+    for (const u of usersToSeed) {
+      const existing = await User.findOne({ where: { email: u.email } });
+      if (!existing) {
+        const hashed = await bcrypt.hash(u.password, 10);
+        await User.create({ name: u.name, email: u.email, password: hashed, role: u.role });
+        console.log(`✅ ${u.role} user created: ${u.email}`);
+      } else {
+        console.log(`ℹ️ ${u.role} user already exists: ${u.email}`);
+      }
     }
 
 
