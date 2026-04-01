@@ -1,3 +1,8 @@
+## 🌐 Live Demo
+🔗 https://dashboard-ptl.netlify.app
+
+
+
 # DASH CRM — Full Stack Web Application
 
 A polished, production-ready full stack CRM dashboard built with React.js, Node.js, Express, and MySQL.
@@ -179,7 +184,7 @@ After running the `init.js` setup script, the default Super Admin is:
 
 ```
 Email:    admin@crm.com
-Password: Admin@123
+Password: Admin@1234
 ```
 
 *(You can also use the `/api/auth/seed` endpoint to create the standard `demo@crm.com` user).*
