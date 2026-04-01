@@ -114,10 +114,15 @@ const startServer = async () => {
 
     // Ensure role column accepts our newer roles
     try {
-      await sequelize.query("ALTER TABLE Users MODIFY COLUMN role VARCHAR(255) DEFAULT 'user'");
+      const { DataTypes } = require('sequelize');
+      await sequelize.getQueryInterface().changeColumn('Users', 'role', {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        defaultValue: 'user'
+      });
       console.log("✅ Fixed role column schema");
     } catch(e) {
-      console.log("ℹ️ Role column schema check passed", e.message);
+      console.log("ℹ️ Role column schema check passed or failed safely", e.message);
     }
 
     console.log("👉 Seeding users...");

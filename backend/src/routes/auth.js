@@ -95,9 +95,18 @@ router.get('/seed', async (req, res) => {
   try {
     console.log("🌱 Seeding users...");
 
-    // Force alter the role column just in case it's an ENUM or too small
+    // Force alter the role column using Sequelize interface to avoid case/dialect issues
     const { sequelize } = require('../config/db');
-    await sequelize.query("ALTER TABLE Users MODIFY COLUMN role VARCHAR(255) DEFAULT 'user'");
+    const { DataTypes } = require('sequelize');
+    try {
+      await sequelize.getQueryInterface().changeColumn('Users', 'role', {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        defaultValue: 'user'
+      });
+    } catch (e) {
+      console.log("Could not change column directly:", e.message);
+    }
 
     await User.destroy({ where: {} });
 
