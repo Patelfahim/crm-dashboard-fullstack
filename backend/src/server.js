@@ -72,30 +72,30 @@ app.use((err, req, res, next) => {
 // PORT
 const PORT = process.env.PORT || 5001;
 
-// 🌱 AUTO SEED USER
-const seedUser = async () => {
+// 🌱 AUTO SEED USERS
+const seedUsers = async () => {
+  const usersToSeed = [
+    { name: 'Admin',      email: 'admin@crm.com', password: 'Admin@1234', role: 'admin' },
+    { name: 'Regular User', email: 'user@crm.com',  password: 'User@1234',  role: 'user'  },
+    { name: 'Sales Rep',  email: 'sales@crm.com', password: 'Sales@1234', role: 'sales' },
+  ];
+
   try {
-    console.log("🌱 Checking admin user...");
-
-    const existing = await User.findOne({
-      where: { email: 'admin@crm.com' }
-    });
-
-    if (!existing) {
-      const hashedPassword = await bcrypt.hash('Admin@1234', 10);
-
-      await User.create({
-        name: 'Admin',
-        email: 'admin@crm.com',
-        password: hashedPassword,
-        role: 'admin'
-      });
-
-      console.log("✅ Admin user created");
-    } else {
-      console.log("ℹ️ Admin already exists");
+    for (const u of usersToSeed) {
+      const existing = await User.findOne({ where: { email: u.email } });
+      if (!existing) {
+        const hashedPassword = await bcrypt.hash(u.password, 10);
+        await User.create({
+          name: u.name,
+          email: u.email,
+          password: hashedPassword,
+          role: u.role,
+        });
+        console.log(`✅ ${u.role} user created: ${u.email}`);
+      } else {
+        console.log(`ℹ️ ${u.role} user already exists: ${u.email}`);
+      }
     }
-
   } catch (error) {
     console.error("❌ Seed error:", error);
   }
