@@ -26,7 +26,11 @@ const setupDB = async () => {
 
     // Seed admin user
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@crm.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@1234';
+
+    const userEmail = process.env.ADMIN_EMAIL || 'user@crm.com';
+    const userPassword = process.env.ADMIN_PASSWORD || 'User@1234';
+
 
     const existingAdmin = await User.findOne({ where: { email: adminEmail } });
     if (!existingAdmin) {
@@ -41,6 +45,21 @@ const setupDB = async () => {
     } else {
         console.log(`ℹ️ Admin user already exists: ${adminEmail}`);
     }
+
+    const existingUser = await User.findOne({ where: { email: userEmail } });
+    if (!existingUser) {
+      const hashedPassword2 = await bcrypt.hash(userPassword, 10);
+      await User.create({
+        name: 'Super Admin',
+        email: userEmail,
+        password: hashedPassword2,
+        role: 'admin'
+      });
+      console.log(`✅ Admin user created: ${userEmail}`);
+    } else {
+        console.log(`ℹ️ Admin user already exists: ${userEmail}`);
+    }
+
 
     process.exit(0);
   } catch (error) {

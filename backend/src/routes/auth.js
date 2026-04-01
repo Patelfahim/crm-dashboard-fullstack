@@ -106,13 +106,31 @@ router.get('/seed', async (req, res) => {
       role: 'admin'
     });
 
+    const hashedPassword2 = await bcrypt.hash('User@1234', 10);
+
+    const user2 = await User.create({
+      name: 'User',
+      email: 'user@crm.com',
+      password: hashedPassword2,
+      role: 'user'
+    });
+
     console.log("✅ User created:", user.email);
+    console.log("✅ User created:", user2.email);
 
     res.json({
       message: 'User created successfully',
       credentials: {
         email: 'admin@crm.com',
         password: 'Admin@1234'
+      }
+    });
+
+    res.json({
+      message: 'User created successfully',
+      credentials: {
+        email: 'user@crm.com',
+        password: 'User@1234'
       }
     });
 
