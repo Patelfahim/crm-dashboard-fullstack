@@ -22,7 +22,16 @@ const userSchema = new mongoose.Schema({
     default: 'user'
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
 });
 
 // Hash password before saving (only if modified)
