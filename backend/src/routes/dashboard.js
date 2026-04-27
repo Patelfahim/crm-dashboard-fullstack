@@ -10,24 +10,30 @@ const User = require('../models/User');
 router.get('/stats', protect, async (req, res) => {
   try {
     const totalLeads = await Lead.count();
-    const hotLeads = await Lead.count({ where: { status: 'Hot' } });
-    const tasksToday = await Task.count({ where: { status: 'Pending' } });
+    // "Hot" = leads in Proposal or Negotiation (actively being pursued)
+    const hotLeads = await Lead.count({ where: { status: ['Proposal', 'Negotiation'] } });
+    const wonLeads = await Lead.count({ where: { status: 'Won' } });
+    const pendingTasks = await Task.count({ where: { status: 'Pending' } });
     
-    // Calculate total revenue from Lead values (basic extraction)
+    // Calculate total revenue from Lead values
     const allLeads = await Lead.findAll();
     const totalRevenue = allLeads.reduce((acc, lead) => {
       const val = parseInt(lead.value.replace(/[^0-9]/g, '')) || 0;
       return acc + val;
     }, 0);
 
+    // Win rate = Won / Total (percentage)
+    const winRate = totalLeads > 0 ? `${Math.round((wonLeads / totalLeads) * 100)}%` : '0%';
+
     res.json({
       success: true,
       data: {
         totalLeads,
         hotLeads,
-        tasksToday,
+        wonLeads,
+        pendingTasks,
         revenue: `₹${totalRevenue.toLocaleString('en-IN')}`,
-        conversionRate: totalLeads > 0 ? `${Math.round((hotLeads/totalLeads)*100)}%` : '0%',
+        conversionRate: winRate,
         activePipeline: `₹${(totalRevenue * 0.4).toLocaleString('en-IN')}`
       }
     });

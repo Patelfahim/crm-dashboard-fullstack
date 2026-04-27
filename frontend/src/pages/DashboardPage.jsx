@@ -201,12 +201,22 @@ export default function DashboardPage() {
     }
   };
 
+  const q = searchQuery.toLowerCase();
   const filteredLeads = leads.filter(l =>
-    l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    l.company.toLowerCase().includes(searchQuery.toLowerCase())
+    l.name.toLowerCase().includes(q) ||
+    l.company.toLowerCase().includes(q) ||
+    (l.status && l.status.toLowerCase().includes(q)) ||
+    (l.value && l.value.toLowerCase().includes(q))
   );
 
-  const pendingTasks = tasks.filter(t => !t.done).length;
+  const filteredTasks = tasks.filter(t =>
+    t.title.toLowerCase().includes(q) ||
+    (t.priority && t.priority.toLowerCase().includes(q)) ||
+    (t.assignee && t.assignee.toLowerCase().includes(q)) ||
+    (t.due && t.due.toLowerCase().includes(q))
+  );
+
+  const pendingTasks = tasks.filter(t => t.status !== 'Completed').length;
 
   const allNavItems = [
     { key: 'overview', icon: '⬡', label: 'Overview' },
@@ -335,8 +345,8 @@ export default function DashboardPage() {
               {activeTab === 'overview' && (
                 <OverviewTab 
                   stats={stats} 
-                  leads={leads} 
-                  tasks={tasks} 
+                  leads={searchQuery ? filteredLeads : leads} 
+                  tasks={searchQuery ? filteredTasks : tasks} 
                   toggleTask={toggleTask} 
                   pipeline={pipeline} 
                 />
@@ -351,7 +361,7 @@ export default function DashboardPage() {
               {activeTab === 'pipeline' && <PipelineTab pipeline={pipeline} />}
               {activeTab === 'tasks' && (
                 <TasksTab 
-                  tasks={tasks} 
+                  tasks={searchQuery ? filteredTasks : tasks} 
                   toggleTask={perms.canEditTask ? toggleTask : null}
                   onEdit={perms.canEditTask ? (t) => { setEditingItem(t); setShowTaskModal(true); } : null}
                   onDelete={perms.canDeleteTask ? handleDeleteTask : null}
@@ -391,10 +401,12 @@ function OverviewTab({ stats, leads, tasks, toggleTask, pipeline }) {
   const recentLeads = leads.slice(0, 4);
 
   const statItems = [
-    { label: 'Total Leads', value: stats.totalLeads, change: '+12%', up: true },
-    { label: 'Hot Leads', value: stats.hotLeads, change: '+5', up: true },
-    { label: 'Revenue', value: stats.revenue, change: '+18%', up: true },
-    { label: 'Win Rate', value: stats.conversionRate, change: '+2%', up: true },
+    { label: 'Total Leads', value: stats.totalLeads, change: `${stats.totalLeads} in pipeline`, up: true },
+    { label: 'Active Deals', value: stats.hotLeads, change: 'Proposal + Negotiation', up: stats.hotLeads > 0 },
+    { label: 'Revenue', value: stats.revenue, change: 'Total deal value', up: true },
+    { label: 'Win Rate', value: stats.conversionRate, change: `${stats.wonLeads || 0} deals won`, up: parseInt(stats.conversionRate) > 0 },
+    { label: 'Pending Tasks', value: stats.pendingTasks, change: 'Awaiting completion', up: false },
+    { label: 'Pipeline Value', value: stats.activePipeline, change: 'Active pipeline', up: true },
   ];
 
   return (
