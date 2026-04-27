@@ -3,11 +3,9 @@ console.log("🔥 AUTH ROUTES LOADED");
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
 
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
-
 
 // 🔐 Generate JWT token
 const generateToken = (id) => {
@@ -18,54 +16,39 @@ const generateToken = (id) => {
   );
 };
 
-
-// 🚀 LOGIN (FIXED → POST)
+// 🚀 LOGIN
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
     console.log("📥 Login attempt:", email);
-    console.log("🔑 Password provided:", password); // temporary for debugging
 
-    // validation
     if (!email || !password) {
-      return res.status(400).json({
-        message: 'Please provide email and password'
-      });
+      return res.status(400).json({ message: 'Please provide email and password' });
     }
 
-    // find user
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ email });
 
     if (!user) {
       console.log("❌ User not found");
-      return res.status(401).json({
-        message: 'Invalid email or password'
-      });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    console.log("🔐 Stored hash:", user.password);
-
-    // compare password
-    const isMatch = await bcrypt.compare(password, user.password);
-
+    const isMatch = await user.comparePassword(password);
     console.log("✅ Match result:", isMatch);
 
     if (!isMatch) {
       console.log("❌ Password mismatch for user:", email);
-      return res.status(401).json({
-        message: 'Invalid email or password'
-      });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     console.log("🎉 Login successful for user:", email);
 
-    // success
     res.json({
       success: true,
-      token: generateToken(user.id),
+      token: generateToken(user._id),
       user: {
-        id: user.id,
+        id: user._id,
         name: user.name,
         email: user.email,
         role: user.role
@@ -74,12 +57,9 @@ router.post('/login', async (req, res) => {
 
   } catch (error) {
     console.error("❌ Login error:", error);
-    res.status(500).json({
-      message: 'Server error'
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 // 🔐 GET CURRENT USER
 router.get('/me', protect, (req, res) => {
@@ -89,26 +69,12 @@ router.get('/me', protect, (req, res) => {
   });
 });
 
-
-// 🌱 SEED USERS (CHANGED TO GET FOR BROWSER ACCESS)
+// 🌱 SEED USERS
 router.get('/seed', async (req, res) => {
   try {
     console.log("🌱 Seeding users...");
 
-    // Force alter the role column using Sequelize interface to avoid case/dialect issues
-    const { sequelize } = require('../config/db');
-    const { DataTypes } = require('sequelize');
-    try {
-      await sequelize.getQueryInterface().changeColumn('Users', 'role', {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-        defaultValue: 'user'
-      });
-    } catch (e) {
-      console.log("Could not change column directly:", e.message);
-    }
-
-    await User.destroy({ where: {} });
+    await User.deleteMany({});
 
     const usersToSeed = [
       { name: 'Admin User', email: 'admin@crm.com', password: 'Admin@1234', role: 'admin' },
@@ -117,13 +83,7 @@ router.get('/seed', async (req, res) => {
     ];
 
     for (const u of usersToSeed) {
-      const hashedPassword = await bcrypt.hash(u.password, 10);
-      await User.create({
-        name: u.name,
-        email: u.email,
-        password: hashedPassword,
-        role: u.role,
-      });
+      await User.create(u);
       console.log(`✅ ${u.role} user created: ${u.email}`);
     }
 
@@ -134,9 +94,7 @@ router.get('/seed', async (req, res) => {
 
   } catch (error) {
     console.error("❌ Seed error:", error);
-    res.status(500).json({
-      message: error.message
-    });
+    res.status(500).json({ message: error.message });
   }
 });
 

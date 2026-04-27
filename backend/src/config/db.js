@@ -1,44 +1,14 @@
-const { Sequelize } = require('sequelize');
+const mongoose = require('mongoose');
 
-// Create Sequelize instance
-const sequelize = process.env.MYSQL_PUBLIC_URL
-  ? new Sequelize(process.env.MYSQL_PUBLIC_URL, {
-      dialect: 'mysql',
-      logging:false,
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
-      }
-    })
-  : new Sequelize(
-      process.env.DB_NAME,
-      process.env.DB_USER,
-      process.env.DB_PASSWORD,
-      {
-        host: process.env.DB_HOST,
-        dialect: 'mysql',
-        logging: false,
-      }
-    );
-
-// Connect DB
 const connectDB = async () => {
   try {
-    console.log("👉 Connecting to MySQL...");
-
-    await sequelize.authenticate();
-
-    console.log("✅ MySQL Connected Successfully");
-
+    const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/crm_dashboard';
+    console.log('👉 Connecting to MongoDB...');
+    await mongoose.connect(uri);
+    console.log('✅ MongoDB Connected Successfully');
   } catch (error) {
-    console.error("❌ MySQL FULL ERROR:");
-    console.error(error); // 👈 IMPORTANT (not just message)
-
-    // ❌ DON'T exit app (prevents Render crash loop)
-    // process.exit(1);
+    console.error('❌ MongoDB Connection Error:', error.message);
   }
 };
 
-module.exports = { sequelize, connectDB };
+module.exports = { connectDB };

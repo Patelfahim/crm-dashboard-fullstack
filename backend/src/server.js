@@ -1,14 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const bcrypt = require('bcrypt');
 
 dotenv.config();
 
 const app = express();
 
 // DB
-const { connectDB, sequelize } = require('./config/db');
+const { connectDB } = require('./config/db');
 
 // Models
 const User = require('./models/User');
@@ -22,7 +21,7 @@ const dashboardRoutes = require('./routes/dashboard');
 // Middleware
 app.use(cors({
   origin: function (origin, callback) {
-    callback(null, true); // Allow all origins dynamically
+    callback(null, true);
   },
   credentials: true
 }));
@@ -43,28 +42,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// 🔍 DB Connection Test Route
-app.get('/api/test-db', async (req, res) => {
-  try {
-    await sequelize.authenticate();
-    const [results] = await sequelize.query("SELECT 1+1 AS result");
-
-    res.json({
-      status: 'success',
-      message: 'Database connection is ACTIVE',
-      db_check: results[0].result === 2
-    });
-
-  } catch (error) {
-    console.error("❌ DB TEST FAILED:", error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Database connection FAILED',
-      details: error.message
-    });
-  }
-});
-
 // Error handler
 app.use((err, req, res, next) => {
   console.error("❌ ERROR:", err);
@@ -77,22 +54,16 @@ const PORT = process.env.PORT || 5001;
 // 🌱 AUTO SEED USERS
 const seedUsers = async () => {
   const usersToSeed = [
-    { name: 'Admin',      email: 'admin@crm.com', password: 'Admin@1234', role: 'admin' },
+    { name: 'Admin',        email: 'admin@crm.com', password: 'Admin@1234', role: 'admin' },
     { name: 'Regular User', email: 'user@crm.com',  password: 'User@1234',  role: 'user'  },
-    { name: 'Sales Rep',  email: 'sales@crm.com', password: 'Sales@1234', role: 'sales' },
+    { name: 'Sales Rep',    email: 'sales@crm.com', password: 'Sales@1234', role: 'sales' },
   ];
 
   try {
     for (const u of usersToSeed) {
-      const existing = await User.findOne({ where: { email: u.email } });
+      const existing = await User.findOne({ email: u.email });
       if (!existing) {
-        const hashedPassword = await bcrypt.hash(u.password, 10);
-        await User.create({
-          name: u.name,
-          email: u.email,
-          password: hashedPassword,
-          role: u.role,
-        });
+        await User.create(u);
         console.log(`✅ ${u.role} user created: ${u.email}`);
       } else {
         console.log(`ℹ️ ${u.role} user already exists: ${u.email}`);
@@ -106,7 +77,7 @@ const seedUsers = async () => {
 // 🌱 AUTO SEED DEMO DATA (Leads & Tasks)
 const seedDemoData = async () => {
   try {
-    const leadCount = await Lead.count();
+    const leadCount = await Lead.countDocuments();
     if (leadCount > 0) {
       console.log(`ℹ️ Demo data already exists (${leadCount} leads). Skipping.`);
       return;
@@ -145,10 +116,10 @@ const seedDemoData = async () => {
       { title: 'Update LinkedIn outreach templates',        priority: 'Low',    due: 'May 1',           status: 'Completed', assignee: 'Admin' },
     ];
 
-    await Lead.bulkCreate(demoLeads);
+    await Lead.insertMany(demoLeads);
     console.log(`✅ ${demoLeads.length} demo leads created`);
 
-    await Task.bulkCreate(demoTasks);
+    await Task.insertMany(demoTasks);
     console.log(`✅ ${demoTasks.length} demo tasks created`);
 
   } catch (error) {
@@ -161,24 +132,7 @@ const startServer = async () => {
   console.log("🚀 Starting server...");
 
   try {
-    console.log("👉 Connecting DB...");
     await connectDB();
-
-    console.log("👉 Syncing database...");
-    await sequelize.sync({ alter: true });
-
-    // Ensure role column accepts our newer roles
-    try {
-      const { DataTypes } = require('sequelize');
-      await sequelize.getQueryInterface().changeColumn('Users', 'role', {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-        defaultValue: 'user'
-      });
-      console.log("✅ Fixed role column schema");
-    } catch(e) {
-      console.log("ℹ️ Role column schema check passed or failed safely", e.message);
-    }
 
     console.log("👉 Seeding users...");
     await seedUsers();

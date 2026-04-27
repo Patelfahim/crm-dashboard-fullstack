@@ -1,33 +1,33 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/db');
+const mongoose = require('mongoose');
 
-const Lead = sequelize.define('Lead', {
+const leadSchema = new mongoose.Schema({
   name: {
-    type: DataTypes.STRING,
-    allowNull: false
+    type: String,
+    required: true
   },
   company: {
-    type: DataTypes.STRING,
-    allowNull: false
+    type: String,
+    required: true
   },
   email: {
-    type: DataTypes.STRING,
-    allowNull: true
+    type: String,
+    default: null
   },
   status: {
-    type: DataTypes.STRING,
-    defaultValue: 'New'
+    type: String,
+    enum: ['New', 'Discovery', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'],
+    default: 'New'
   },
   value: {
-    type: DataTypes.STRING,
-    defaultValue: '₹0'
+    type: String,
+    default: '₹0'
   },
   source: {
-    type: DataTypes.STRING,
-    defaultValue: 'Direct'
+    type: String,
+    default: 'Direct'
   }
 }, {
   timestamps: true
 });
 
-module.exports = Lead;
+module.exports = mongoose.model('Lead', leadSchema);
